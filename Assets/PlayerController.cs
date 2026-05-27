@@ -36,12 +36,11 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void MouseLook(InputAction.CallbackContext context)
+    public void OnLook(InputAction.CallbackContext context)
     {
         Vector2 mouseScreenPosition = context.ReadValue<Vector2>();
         Ray ray = mainCamera.ScreenPointToRay(mouseScreenPosition);
         Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
-
         if (groundPlane.Raycast(ray, out float enter))
         {
             lookTarget = ray.GetPoint(enter);
