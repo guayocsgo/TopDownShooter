@@ -4,15 +4,19 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-     private float moveSpeed = 5f;
-     private float jumpForce = 5f;
-     private float gravity = -9.81f;
-     private float rotationSpeed = 20f;
+    private float moveSpeed = 5f;
+    private float jumpForce = 5f;
+    private float gravity = -9.81f;
+    private float rotationSpeed = 20f;
+
+    // Cuanto más alto, más rápido sigue el crosshair. Bajalo si sigue girando raro (prueba entre 5 y 15)
+    [SerializeField] private float lookSmoothing = 10f;
 
     private Camera mainCamera;
     private CharacterController characterController;
     private Vector2 moveInput;
     private Vector3 lookTarget;
+    private Vector3 rawLookTarget;
     private float verticalVelocity;
     private bool isJumping;
 
@@ -20,6 +24,8 @@ public class PlayerController : MonoBehaviour
     {
         characterController = GetComponent<CharacterController>();
         mainCamera = Camera.main;
+        lookTarget = transform.position + transform.forward * 2f;
+        rawLookTarget = lookTarget;
     }
 
     public void OnMove(InputAction.CallbackContext context)
@@ -40,10 +46,13 @@ public class PlayerController : MonoBehaviour
     {
         Vector2 mouseScreenPosition = context.ReadValue<Vector2>();
         Ray ray = mainCamera.ScreenPointToRay(mouseScreenPosition);
-        Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+
+        // Plano a la altura real del jugador
+        Plane groundPlane = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
+
         if (groundPlane.Raycast(ray, out float enter))
         {
-            lookTarget = ray.GetPoint(enter);
+            rawLookTarget = ray.GetPoint(enter);
         }
     }
 
@@ -51,6 +60,7 @@ public class PlayerController : MonoBehaviour
     {
         ApplyGravity();
         MovePlayer();
+        SmoothLookTarget();
         RotateTowardsMouse();
     }
 
@@ -69,9 +79,22 @@ public class PlayerController : MonoBehaviour
 
     private void MovePlayer()
     {
-        Vector3 movement = new Vector3(moveInput.x, 0f, moveInput.y) * moveSpeed;
+        Vector3 camForward = mainCamera.transform.forward;
+        Vector3 camRight = mainCamera.transform.right;
+        camForward.y = 0f;
+        camRight.y = 0f;
+        camForward.Normalize();
+        camRight.Normalize();
+
+        Vector3 movement = (camForward * moveInput.y + camRight * moveInput.x) * moveSpeed;
         movement.y = verticalVelocity;
         characterController.Move(movement * Time.deltaTime);
+    }
+
+    // Suaviza el salto brusco del punto en el plano cuando la cámara Cinemachine rota
+    private void SmoothLookTarget()
+    {
+        lookTarget = Vector3.Lerp(lookTarget, rawLookTarget, lookSmoothing * Time.deltaTime);
     }
 
     private void RotateTowardsMouse()
@@ -85,4 +108,4 @@ public class PlayerController : MonoBehaviour
         transform.rotation = Quaternion.Slerp(
             transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
     }
-}
+}   
