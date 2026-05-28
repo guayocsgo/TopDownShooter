@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,6 +13,10 @@ public class PlayerController : MonoBehaviour
 
     [Header("Mouse Look")]
     [SerializeField] private float lookSmoothing = 10f;
+
+    [Header("Shooting")]
+    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform shootPoint;
 
     private Camera mainCamera;
     private CharacterController characterController;
@@ -46,8 +49,6 @@ public class PlayerController : MonoBehaviour
         UpdateAnimations();
     }
 
-   
-
     public void OnMove(InputAction.CallbackContext context)
     {
         moveInput = context.ReadValue<Vector2>();
@@ -58,9 +59,7 @@ public class PlayerController : MonoBehaviour
         if (context.performed && characterController.isGrounded)
         {
             isJumping = true;
-
             animator.SetBool("IsJumping", true);
-
             verticalVelocity = Mathf.Sqrt(jumpForce * -2f * gravity);
         }
     }
@@ -70,6 +69,11 @@ public class PlayerController : MonoBehaviour
         if (context.performed)
         {
             animator.SetTrigger("Shoot");
+
+            if (bulletPrefab != null && shootPoint != null)
+            {
+                Instantiate(bulletPrefab, shootPoint.position, shootPoint.rotation);
+            }
         }
     }
 
@@ -98,8 +102,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
-
     private void MovePlayer()
     {
         Vector3 camForward = mainCamera.transform.forward;
@@ -125,7 +127,6 @@ public class PlayerController : MonoBehaviour
         {
             verticalVelocity = -2f;
 
-           
             if (isJumping)
             {
                 isJumping = false;
@@ -135,8 +136,6 @@ public class PlayerController : MonoBehaviour
 
         verticalVelocity += gravity * Time.deltaTime;
     }
-
-    
 
     private void SmoothLookTarget()
     {
@@ -165,8 +164,6 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-   
-
     private void UpdateAnimations()
     {
         Vector3 horizontalVelocity = characterController.velocity;
@@ -176,7 +173,6 @@ public class PlayerController : MonoBehaviour
 
         animator.SetBool("IsMoving", isMoving);
 
-        
         animator.SetFloat("MoveX", moveInput.x);
         animator.SetFloat("MoveY", moveInput.y);
     }
