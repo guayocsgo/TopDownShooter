@@ -9,6 +9,8 @@ public class ScoreManager : MonoBehaviour
 
     private int score;
 
+    public int Score => score;
+
     private void Awake()
     {
         if (Instance == null)

@@ -1,5 +1,6 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
@@ -18,17 +19,23 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform shootPoint;
 
+    [Header("Speed Boost")]
+    [SerializeField] private float boostMultiplier = 2f;
+    [SerializeField] private float boostDuration = 10f;
+    [SerializeField] private Color boostColor = Color.cyan;
+    [SerializeField] private GameObject boostIcon;
+
     private Camera mainCamera;
     private CharacterController characterController;
     private Animator animator;
 
     private Vector2 moveInput;
-
     private Vector3 lookTarget;
     private Vector3 rawLookTarget;
 
     private float verticalVelocity;
     private bool isJumping;
+    private bool isBoosted;
 
     private void Awake()
     {
@@ -48,6 +55,8 @@ public class PlayerController : MonoBehaviour
         RotateTowardsMouse();
         UpdateAnimations();
     }
+
+    
 
     public void OnMove(InputAction.CallbackContext context)
     {
@@ -71,24 +80,19 @@ public class PlayerController : MonoBehaviour
             animator.SetTrigger("Shoot");
 
             if (bulletPrefab != null && shootPoint != null)
-            {
                 Instantiate(bulletPrefab, shootPoint.position, shootPoint.rotation);
-            }
         }
     }
 
     public void OnReload(InputAction.CallbackContext context)
     {
         if (context.performed)
-        {
             animator.SetTrigger("Reload");
-        }
     }
 
     public void OnLook(InputAction.CallbackContext context)
     {
         Vector2 mouseScreenPosition = context.ReadValue<Vector2>();
-
         Ray ray = mainCamera.ScreenPointToRay(mouseScreenPosition);
 
         Plane groundPlane = new Plane(
@@ -97,10 +101,10 @@ public class PlayerController : MonoBehaviour
         );
 
         if (groundPlane.Raycast(ray, out float enter))
-        {
             rawLookTarget = ray.GetPoint(enter);
-        }
     }
+
+    
 
     private void MovePlayer()
     {
@@ -149,14 +153,11 @@ public class PlayerController : MonoBehaviour
     private void RotateTowardsMouse()
     {
         Vector3 lookDirection = lookTarget - transform.position;
-
         lookDirection.y = 0f;
 
-        if (lookDirection.sqrMagnitude <= 0.001f)
-            return;
+        if (lookDirection.sqrMagnitude <= 0.001f) return;
 
         Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-
         transform.rotation = Quaternion.Slerp(
             transform.rotation,
             targetRotation,
@@ -170,10 +171,47 @@ public class PlayerController : MonoBehaviour
         horizontalVelocity.y = 0f;
 
         bool isMoving = horizontalVelocity.magnitude > 0.1f;
-
         animator.SetBool("IsMoving", isMoving);
-
         animator.SetFloat("MoveX", moveInput.x);
         animator.SetFloat("MoveY", moveInput.y);
+    }
+
+   
+
+    public void ActivateSpeedBoost()
+    {
+        if (isBoosted) return;
+        StartCoroutine(SpeedBoostCoroutine());
+    }
+
+    private IEnumerator SpeedBoostCoroutine()
+    {
+        isBoosted = true;
+
+        float originalSpeed = moveSpeed;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        Color[] originalColors = new Color[renderers.Length];
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            originalColors[i] = renderers[i].material.color;
+            renderers[i].material.color = boostColor;
+        }
+
+        moveSpeed *= boostMultiplier;
+
+        if (boostIcon != null) boostIcon.SetActive(true);
+
+        yield return new WaitForSeconds(boostDuration);
+
+        moveSpeed = originalSpeed;
+
+        for (int i = 0; i < renderers.Length; i++)
+            renderers[i].material.color = originalColors[i];
+
+        if (boostIcon != null) boostIcon.SetActive(false);
+
+        isBoosted = false;
     }
 }

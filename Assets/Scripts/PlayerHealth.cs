@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -7,7 +8,7 @@ using System.Collections.Generic;
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Vida")]
-    [SerializeField] private int maxHearts = 3;
+    [SerializeField] private int maxHearts = 5;
     [SerializeField] private float invincibilityTime = 1.5f;
 
     [Header("UI Corazones")]
@@ -59,7 +60,7 @@ public class PlayerHealth : MonoBehaviour
             img.preserveAspect = true;
 
             RectTransform rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(50, 50);
+            rt.sizeDelta = new Vector2(120, 120);
 
             heartImages.Add(img);
         }
@@ -75,13 +76,17 @@ public class PlayerHealth : MonoBehaviour
         UpdateHeartsUI();
 
         if (currentHearts <= 0)
-        {
             StartCoroutine(DieSequence());
-        }
         else
-        {
             StartCoroutine(InvincibilityFrames());
-        }
+    }
+
+    public void HealHeart()
+    {
+        if (currentHearts >= maxHearts) return;
+
+        currentHearts++;
+        UpdateHeartsUI();
     }
 
     private void UpdateHeartsUI()
@@ -116,13 +121,22 @@ public class PlayerHealth : MonoBehaviour
         if (playerAnimator != null)
             playerAnimator.SetTrigger(deathAnimationTrigger);
 
-        
+        UnityEngine.InputSystem.PlayerInput playerInput =
+            GetComponent<UnityEngine.InputSystem.PlayerInput>();
+        if (playerInput != null) playerInput.enabled = false;
+
         PlayerController pc = GetComponent<PlayerController>();
         if (pc != null) pc.enabled = false;
 
         yield return new WaitForSeconds(deathDelay);
 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        
+        GameOverPanel panel = FindObjectOfType<GameOverPanel>(true);
+        if (panel != null)
+        {
+            int finalScore = ScoreManager.Instance != null ? ScoreManager.Instance.Score : 0;
+            panel.Show(finalScore);
+        }
     }
 
     private void SetRenderersVisible(bool visible)
